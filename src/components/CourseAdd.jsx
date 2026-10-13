@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
-import { COURSES } from '../data/catalog.js';
 import { usePlanner, nextColor } from '../lib/store.jsx';
+import { useData } from '../lib/data.jsx';
 
 export function useAddCourse() {
   const { updatePlan } = usePlanner();
@@ -15,24 +15,25 @@ export function useAddCourse() {
 
 export default function CourseAdd() {
   const { plan } = usePlanner();
+  const { catalog } = useData();
   const add = useAddCourse();
   const [q, setQ] = useState('');
   const [hi, setHi] = useState(0);
 
+  const all = useMemo(() => Object.values(catalog.courses), [catalog]);
   const matches = useMemo(() => {
     const s = q.trim().toUpperCase().replace(/\s+/g, ' ');
     if (!s) return [];
     const compact = s.replace(/\s/g, '');
-    return Object.values(COURSES)
-      .filter((c) => !plan.courses.includes(c.id))
-      .filter(
-        (c) =>
-          c.id.replace(' ', '').startsWith(compact) ||
-          c.title.toUpperCase().includes(s) ||
-          c.subjectName.toUpperCase().startsWith(s)
-      )
-      .slice(0, 8);
-  }, [q, plan.courses]);
+    const byId = [];
+    const byTitle = [];
+    for (const c of all) {
+      if (plan.courses.includes(c.id)) continue;
+      if ((c.subject + c.number).startsWith(compact)) byId.push(c);
+      else if (s.length > 2 && c.title.toUpperCase().includes(s)) byTitle.push(c);
+    }
+    return [...byId, ...byTitle].slice(0, 10);
+  }, [q, all, plan.courses]);
 
   const choose = (c) => {
     add(c.id);

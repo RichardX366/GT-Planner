@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { Check, ChevronDown, Copy, Moon, Pencil, Plus, Sun, Trash2 } from 'lucide-react';
 import { usePlanner, newPlan } from '../lib/store.jsx';
-import { COURSES, TERM } from '../data/catalog.js';
+import { useData } from '../lib/data.jsx';
+import { termLabel } from '../lib/api.js';
 
 const TABS = [
   ['scheduler', 'Scheduler'],
@@ -11,17 +12,27 @@ const TABS = [
 
 export default function Header({ tab, setTab, selected }) {
   const { state, setState, plan } = usePlanner();
-  const credits = plan.courses.reduce((a, id) => a + (COURSES[id]?.hours || 0), 0);
+  const { terms, catalog } = useData();
+  const credits = plan ? plan.courses.reduce((a, id) => a + (catalog.courses[id]?.hours || 0), 0) : 0;
 
   return (
     <header className="header">
-      <div className="brand" onClick={() => setTab('scheduler')}>GT Planner</div>
-      <div className="header-select">
-        <span>{TERM}</span>
-        <ChevronDown size={16} />
+      <div className="header-left">
+        <div className="brand" onClick={() => setTab('scheduler')}>GT Planner</div>
+        <label className="header-select term-select">
+          <select value={state.term || ''} onChange={(e) => setState((s) => ({ ...s, term: e.target.value }))}>
+            {!state.term && <option value="">Loading…</option>}
+            {[...terms].reverse().map((t) => (
+              <option key={t} value={t}>
+                {termLabel(t)}
+              </option>
+            ))}
+          </select>
+          <ChevronDown size={16} />
+        </label>
+        {plan && <PlanMenu />}
+        <div className="credits">{credits} Credits</div>
       </div>
-      <PlanMenu />
-      <div className="credits">{credits} Credits</div>
 
       <nav className="tabs">
         {TABS.map(([k, label]) => (
@@ -57,21 +68,24 @@ function PlanMenu() {
     return () => document.removeEventListener('mousedown', close);
   }, []);
 
+  const termPlans = state.order.filter((id) => state.plans[id].term === state.term);
+
   const add = (copy) => {
-    const name = copy ? `${plan.name} (copy)` : `Plan ${String.fromCharCode(65 + state.order.length)}`;
+    const name = copy ? `${plan.name} (copy)` : `Plan ${String.fromCharCode(65 + termPlans.length)}`;
     const p = copy
-      ? { ...structuredClone(plan), id: newPlan('').id, name, saved: null }
-      : newPlan(name);
+      ? { ...structuredClone(plan), id: newPlan('').id, name }
+      : newPlan(name, state.term);
     setState((s) => ({ ...s, plans: { ...s.plans, [p.id]: p }, order: [...s.order, p.id], activePlanId: p.id }));
   };
 
   const remove = (id) =>
     setState((s) => {
-      if (s.order.length === 1) return s;
       const order = s.order.filter((x) => x !== id);
       const plans = { ...s.plans };
       delete plans[id];
-      return { ...s, plans, order, activePlanId: s.activePlanId === id ? order[0] : s.activePlanId };
+      const sameTerm = order.find((x) => plans[x].term === s.term);
+      if (!sameTerm) return s;
+      return { ...s, plans, order, activePlanId: s.activePlanId === id ? sameTerm : s.activePlanId };
     });
 
   const rename = (id, name) =>
@@ -84,7 +98,7 @@ function PlanMenu() {
       </button>
       {open && (
         <div className="menu">
-          {state.order.map((id) => {
+          {termPlans.map((id) => {
             const p = state.plans[id];
             return (
               <div key={id} className={id === state.activePlanId ? 'menu-row active' : 'menu-row'}>
@@ -108,13 +122,12 @@ function PlanMenu() {
                   <button className="plain grow" onClick={() => setState((s) => ({ ...s, activePlanId: id }))}>
                     {id === state.activePlanId ? <Check size={14} /> : <span style={{ width: 14 }} />}
                     {p.name}
-                    {p.saved && <span className="tiny-badge">saved</span>}
                   </button>
                 )}
                 <button className="icon-btn sm" title="Rename" onClick={() => setEditing(id)}>
                   <Pencil size={13} />
                 </button>
-                <button className="icon-btn sm" title="Delete" disabled={state.order.length === 1} onClick={() => remove(id)}>
+                <button className="icon-btn sm" title="Delete" disabled={termPlans.length === 1} onClick={() => remove(id)}>
                   <Trash2 size={13} />
                 </button>
               </div>

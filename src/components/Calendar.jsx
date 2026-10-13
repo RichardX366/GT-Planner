@@ -1,12 +1,12 @@
-import { COURSES } from '../data/catalog.js';
+import { useData } from '../lib/data.jsx';
 import { DAYS, daysOf, fmtHour, fmtRange } from '../lib/time.js';
 
-const HOUR_PX = 52;
+const HOUR_PX = 58;
 
-function rangeFor(combo, criteria) {
+function rangeFor(combo, criteria, ghost) {
   let lo = 8;
   let hi = 18;
-  combo?.sections.forEach((s) =>
+  [...(combo?.sections || []), ...(ghost ? [ghost] : [])].forEach((s) =>
     s.meetings.forEach((m) => {
       lo = Math.min(lo, Math.floor(m.start / 60));
       hi = Math.max(hi, Math.ceil(m.end / 60));
@@ -20,10 +20,17 @@ function rangeFor(combo, criteria) {
   return [lo, hi];
 }
 
-export default function Calendar({ combo, colors, criteria, preview, compact = false }) {
-  const [lo, hi] = rangeFor(combo, criteria);
+/**
+ * ghost: a section being hovered in the course list. It's drawn as a light, dashed
+ * preview, and the section it would replace (same course + type) is dimmed.
+ */
+export default function Calendar({ combo, colors, criteria, preview, ghost = null, compact = false }) {
+  const { catalog } = useData();
+  const [lo, hi] = rangeFor(combo, criteria, ghost);
+  const ghostInSchedule = ghost && combo?.sections.some((s) => s.crn === ghost.crn);
+  const replaced = (s) => ghost && !ghostInSchedule && s.courseId === ghost.courseId && s.type === ghost.type;
   const hours = Array.from({ length: hi - lo }, (_, i) => lo + i);
-  const hourPx = compact ? 40 : HOUR_PX;
+  const hourPx = compact ? 44 : HOUR_PX;
   const y = (min) => ((min - lo * 60) / 60) * hourPx;
   const height = (hi - lo) * hourPx;
 
@@ -70,24 +77,42 @@ export default function Calendar({ combo, colors, criteria, preview, compact = f
               s.meetings
                 .filter((m) => daysOf(m.days).includes(d))
                 .map((m, i) => {
-                  const course = COURSES[s.courseId];
+                  const course = catalog.courses[s.courseId];
                   return (
                     <div
                       key={s.crn + i}
-                      className="cal-event"
+                      className={`cal-event ${replaced(s) ? 'replaced' : ''} ${ghostInSchedule && s.crn === ghost.crn ? 'hovered' : ''}`}
                       style={{ top: y(m.start), height: y(m.end) - y(m.start), '--c': colors[s.courseId] }}
-                      title={`${s.courseId} ${s.section} · ${course.title}\n${s.type} · CRN ${s.crn}\n${s.instructor}\n${m.location}`}
+                      title={`${s.courseId} ${s.section} · ${course?.title ?? ''}\n${s.type} · CRN ${s.crn}\n${s.instructor}\n${m.location}`}
                     >
                       <div className="ev-id">
                         {s.courseId} {s.section}
                       </div>
                       <div className="ev-line">{fmtRange(m.start, m.end)}</div>
                       <div className="ev-line">{m.location}</div>
-                      <div className="ev-line">{s.instructor === 'TA Staff' ? s.type : s.instructor}</div>
+                      <div className="ev-line">{s.instructor}</div>
                     </div>
                   );
                 })
             )}
+            {ghost &&
+              !ghostInSchedule &&
+              ghost.meetings
+                .filter((m) => daysOf(m.days).includes(d))
+                .map((m, i) => (
+                  <div
+                    key={`ghost${i}`}
+                    className="cal-ghost"
+                    style={{ top: y(m.start), height: y(m.end) - y(m.start), '--c': colors[ghost.courseId] || '#cfd8dc' }}
+                  >
+                    <div className="ev-id">
+                      {ghost.courseId} {ghost.section}
+                    </div>
+                    <div className="ev-line">{fmtRange(m.start, m.end)}</div>
+                    <div className="ev-line">{m.location}</div>
+                    <div className="ev-line">{ghost.instructor}</div>
+                  </div>
+                ))}
           </div>
         ))}
       </div>

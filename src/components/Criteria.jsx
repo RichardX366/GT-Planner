@@ -1,9 +1,11 @@
 import { Plus, RotateCcw, X } from 'lucide-react';
 import { defaultCriteria, toggleIn, usePlanner } from '../lib/store.jsx';
 import { DAYS, fromInput, toInput } from '../lib/time.js';
+import { useData } from '../lib/data.jsx';
 
 export default function Criteria({ result }) {
   const { plan, updatePlan } = usePlanner();
+  const { catalog } = useData();
   const c = plan.criteria;
   const set = (key, patch) =>
     updatePlan((p) => ({ criteria: { ...p.criteria, [key]: { ...p.criteria[key], ...patch } }, selectedKey: null }));
@@ -25,6 +27,14 @@ export default function Criteria({ result }) {
         Tell the planner what you care about. Schedules that meet <b>every</b> rule are listed as matches. When none
         can, the closest <b>backup schedules</b> are shown with the rules they break.
       </p>
+
+      <Rule title="Campus" on={c.campus.on} onToggle={(on) => set('campus', { on })}>
+        <select value={c.campus.value} onChange={(e) => set('campus', { value: e.target.value })}>
+          {catalog.campuses.map((name) => (
+            <option key={name}>{name}</option>
+          ))}
+        </select>
+      </Rule>
 
       <Rule title="No classes before" on={c.earliestStart.on} onToggle={(on) => set('earliestStart', { on })} extra={impact('earliestStart')}>
         <input type="time" step="900" value={toInput(c.earliestStart.value)} onChange={(e) => set('earliestStart', { value: fromInput(e.target.value) })} />

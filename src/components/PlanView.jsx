@@ -1,50 +1,45 @@
-import { useState } from 'react';
+import { useEffect } from 'react';
 import { Check, ClipboardCopy } from 'lucide-react';
 import Calendar from './Calendar.jsx';
 import { GpaChip } from './CourseCard.jsx';
-import { DayBoxes, StatusCell } from './FindClasses.jsx';
+import { Meetings, StatusCell } from './FindClasses.jsx';
 import { hoursOf, useCopy } from './PlanBar.jsx';
-import { COURSES, SECTIONS_BY_CRN, TERM } from '../data/catalog.js';
+import { useData } from '../lib/data.jsx';
+import { termLabel } from '../lib/api.js';
+import { isLead } from '../lib/scheduler.js';
 import { defaultCriteria, usePlanner } from '../lib/store.jsx';
-import { fmtRange } from '../lib/time.js';
 
 export default function PlanView({ selected, goScheduler }) {
   const { state, plan } = usePlanner();
-  const [source, setSource] = useState(plan.saved ? 'saved' : 'current');
+  const { term, catalog, seats, requestSeats, requestGpa, instructorGpa } = useData();
   const [copied, copy] = useCopy();
 
-  const sections =
-    source === 'saved' && plan.saved
-      ? plan.saved.crns.map((c) => SECTIONS_BY_CRN[c]).filter(Boolean)
-      : selected?.sections || [];
+  const sections = selected?.sections || [];
   const combo = sections.length ? { sections } : null;
   const crns = sections.map((s) => s.crn);
+
+  useEffect(() => {
+    requestSeats(crns);
+    requestGpa([...new Set(sections.map((s) => s.courseId))]);
+  }, [crns.join()]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <main className="page">
       <div className="page-head">
         <div>
           <h1>
-            {TERM} · {plan.name}
+            {termLabel(term)} · {plan.name}
           </h1>
           <p className="muted">
             Registration plan for one-click registration when your time ticket opens.
-            {plan.saved && ` Saved ${new Date(plan.saved.at).toLocaleString()}.`}
+            {plan.saved && ` Autosaved ${new Date(plan.saved.at).toLocaleString()}.`}
           </p>
-        </div>
-        <div className="seg">
-          <button className={source === 'saved' ? 'on' : ''} disabled={!plan.saved} onClick={() => setSource('saved')}>
-            Saved plan
-          </button>
-          <button className={source === 'current' ? 'on' : ''} onClick={() => setSource('current')}>
-            Current selection
-          </button>
         </div>
       </div>
 
       {!sections.length ? (
         <div className="empty-state">
-          No sections yet. <a onClick={goScheduler}>Build a schedule</a> and press <b>Save Plan</b>.
+          No sections yet. <a onClick={goScheduler}>Build a schedule</a> — it’s saved automatically.
         </div>
       ) : (
         <>
@@ -65,9 +60,8 @@ export default function PlanView({ selected, goScheduler }) {
               </thead>
               <tbody>
                 {sections.map((s) => {
-                  const c = COURSES[s.courseId];
-                  const m = s.meetings[0];
-                  const lead = c.primaryType === s.type;
+                  const c = catalog.courses[s.courseId];
+                  const lead = isLead(c, s);
                   return (
                     <tr key={s.crn}>
                       <td>
@@ -77,21 +71,16 @@ export default function PlanView({ selected, goScheduler }) {
                       <td>
                         {s.courseId}, {s.section}
                       </td>
-                      <td>{lead ? c.hours : 0}</td>
+                      <td>{s.hours}</td>
                       <td className="mono">{s.crn}</td>
                       <td>{s.type}</td>
                       <td>{s.instructor}</td>
-                      <td>{lead ? <GpaChip gpa={c.instructors[s.instructor]} /> : '—'}</td>
+                      <td>{lead ? <GpaChip gpa={instructorGpa(s.courseId, s.instructor)} /> : '—'}</td>
                       <td>
-                        {m && (
-                          <div className="meet">
-                            <DayBoxes days={m.days} />
-                            <span>{fmtRange(m.start, m.end)}</span>
-                          </div>
-                        )}
+                        <Meetings s={s} />
                       </td>
                       <td>
-                        <StatusCell s={s} />
+                        <StatusCell seat={seats[s.crn]} />
                       </td>
                     </tr>
                   );
@@ -113,19 +102,19 @@ export default function PlanView({ selected, goScheduler }) {
         </>
       )}
 
-      {state.order.length > 1 && (
+      {state.order.filter((id) => state.plans[id].term === term).length > 1 && (
         <section className="other-plans">
           <h2>Backup plans</h2>
           <div className="plan-cards">
             {state.order
-              .filter((id) => id !== plan.id)
+              .filter((id) => id !== plan.id && state.plans[id].term === term)
               .map((id) => {
                 const p = state.plans[id];
                 return (
                   <div key={id} className="plan-card">
                     <b>{p.name}</b>
                     <span className="muted">{p.courses.join(', ') || 'No courses'}</span>
-                    <span className="muted">{p.saved ? `Saved CRNs: ${p.saved.crns.join(', ')}` : 'Not saved yet'}</span>
+                    <span className="muted">{p.saved?.crns.length ? `CRNs: ${p.saved.crns.join(', ')}` : 'No schedule yet'}</span>
                   </div>
                 );
               })}

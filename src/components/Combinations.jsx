@@ -1,10 +1,10 @@
-import { AlertTriangle, CheckCircle2, LifeBuoy } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, LifeBuoy, Loader2 } from 'lucide-react';
 import { MiniCalendar } from './Calendar.jsx';
 import { GpaChip } from './CourseCard.jsx';
 import { usePlanner } from '../lib/store.jsx';
 import { CRITERIA_LABELS, SORTS } from '../lib/scheduler.js';
 
-export default function Combinations({ result, selected, setHoverKey }) {
+export default function Combinations({ result, hasResult, pending, selected, select, setHoverKey }) {
   const { plan, updatePlan } = usePlanner();
   const { matches, backups } = result;
 
@@ -12,7 +12,7 @@ export default function Combinations({ result, selected, setHoverKey }) {
     <button
       key={c.key}
       className={`combo ${selected?.key === c.key ? 'selected' : ''} ${backup ? 'backup' : ''}`}
-      onClick={() => updatePlan(() => ({ selectedKey: c.key }))}
+      onClick={() => select(c)}
       onMouseEnter={() => setHoverKey(c.key)}
       onMouseLeave={() => setHoverKey(null)}
     >
@@ -42,7 +42,12 @@ export default function Combinations({ result, selected, setHoverKey }) {
   return (
     <aside className="combos">
       <div className="combos-head">
-        <div className="combos-title">Schedule Combinations</div>
+        <div className="combos-title">
+          Schedule Combinations
+          <span className={`updating ${pending ? 'on' : ''}`} title="Recalculating in the background">
+            <Loader2 size={13} className="spin" /> Updating
+          </span>
+        </div>
         <select value={plan.sortBy} onChange={(e) => updatePlan(() => ({ sortBy: e.target.value }))}>
           {Object.entries(SORTS).map(([k, v]) => (
             <option key={k} value={k}>
@@ -59,8 +64,14 @@ export default function Combinations({ result, selected, setHoverKey }) {
         </button>
       </div>
 
-      <div className="combos-scroll">
-        {result.emptyCourses.length > 0 && (
+      <div className={`combos-scroll ${pending ? 'stale' : ''}`}>
+        {!hasResult && pending && (
+          <div className="notice ok">
+            <Loader2 size={15} className="spin" />
+            <div>Calculating schedules…</div>
+          </div>
+        )}
+        {hasResult && result.emptyCourses.length > 0 && (
           <div className="notice danger">
             <AlertTriangle size={15} />
             <div>
@@ -69,7 +80,7 @@ export default function Combinations({ result, selected, setHoverKey }) {
             </div>
           </div>
         )}
-        {!result.emptyCourses.length && plan.courses.length > 0 && result.total === 0 && (
+        {hasResult && !result.emptyCourses.length && plan.courses.length > 0 && result.total === 0 && (
           <div className="notice danger">
             <AlertTriangle size={15} />
             <div>Every combination has a time conflict. Try removing a course or unpinning a section.</div>
