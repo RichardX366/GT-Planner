@@ -105,17 +105,21 @@ export function DataProvider({ children }) {
     });
   }, []);
 
+  // Counts restored from localStorage are shown right away but always refetched once per
+  // session; only counts fetched during this session are reused for SEAT_TTL_MS.
+  const fetchedAt = useRef({});
   const requestSeats = useCallback(
     (crns) => {
       if (!term) return;
       for (const crn of crns) {
         const key = `seat:${term}:${crn}`;
         const have = seatsRef.current[crn];
-        if (inflight.current.has(key) || (have && Date.now() - have.at < SEAT_TTL_MS)) continue;
+        if (inflight.current.has(key) || Date.now() - (fetchedAt.current[key] || 0) < SEAT_TTL_MS) continue;
         inflight.current.add(key);
         seatQueue(() => fetchSeats(term, crn))
           .catch(() => (have && !have.failed ? { ...have, at: Date.now() } : { failed: true, at: Date.now() }))
           .then((d) => {
+            fetchedAt.current[key] = Date.now();
             (pending.current[term] ||= {})[crn] = d;
             if (!flushTimer.current) flushTimer.current = setTimeout(flushSeats, SEAT_FLUSH_MS);
           })
