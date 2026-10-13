@@ -1506,14 +1506,15 @@ select:focus {
   }
 }
 
-@media (max-width: 860px) {
+/* Below ~1024px the centered tabs would collide with the term/plan pickers: give them their own row. */
+@media (max-width: 1024px) {
   .app {
     grid-template-rows: auto 1fr auto;
   }
   .header {
     display: flex;
     flex-wrap: wrap;
-    padding: 8px 16px;
+    padding: 8px 16px 0;
     gap: 10px;
   }
   .tabs {
@@ -1525,6 +1526,9 @@ select:focus {
   .header-right {
     margin-left: auto;
   }
+}
+
+@media (max-width: 860px) {
   .scheduler {
     display: flex;
     flex-direction: column;

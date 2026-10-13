@@ -7,6 +7,7 @@ import { PALETTE, toggleIn, usePlanner } from '../lib/store.jsx';
 import { useData } from '../lib/data.jsx';
 import { courseBundles, seatStatus } from '../lib/scheduler.js';
 import { fmtRange } from '../lib/time.js';
+import { courseCritiqueUrl } from '../lib/api.js';
 
 export default function CourseCard({ id, selectedCrns, empty, conflicts = {} }) {
   const { plan, updatePlan } = usePlanner();
@@ -110,7 +111,8 @@ export default function CourseCard({ id, selectedCrns, empty, conflicts = {} }) 
         <div className="course-title">{course.title}</div>
         <div className="course-meta">
           <span>
-            Course GPA: {courseGpa === undefined ? '…' : courseGpa.course != null ? courseGpa.course.toFixed(2) : 'N/A'}
+            Course GPA:{' '}
+            <GpaChip gpa={courseGpa === undefined ? undefined : courseGpa.course} href={courseCritiqueUrl(id)} />
           </span>
           <span>{course.hours} cr</span>
           {empty ? (

@@ -6,7 +6,7 @@ import { cachedSubjects, fetchSubjects } from '../lib/details.js';
 import { useAddCourse } from './CourseAdd.jsx';
 import { nextColor, usePlanner } from '../lib/store.jsx';
 import { useData } from '../lib/data.jsx';
-import { termLabel } from '../lib/api.js';
+import { courseCritiqueUrl, termLabel } from '../lib/api.js';
 import { isLead, seatStatus } from '../lib/scheduler.js';
 import { fmtRange } from '../lib/time.js';
 
@@ -143,7 +143,7 @@ export default function FindClasses() {
                       <td className="nowrap">{c.id}</td>
                       <td>{c.hours}</td>
                       <td>
-                        <GpaChip gpa={getGpa(c.id)?.course} />
+                        <GpaChip gpa={getGpa(c.id)?.course} href={courseCritiqueUrl(c.id)} />
                       </td>
                       <td className="desc" title={c.description}>
                         {c.description}

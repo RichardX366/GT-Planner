@@ -147,6 +147,9 @@ export function parseTermData(data) {
 /** Course Critique has no per-letter variants, so "CS 1301R" shares "CS 1301"'s data. */
 export const gpaKey = (courseId) => courseId.replace(/^(\S+) (\S+)$/, (_, s, n) => `${s} ${n.replace(/\D/g, '')}`);
 
+/** Course Critique page for a course (letter variants like "CS 1301R" map to "CS 1301"). */
+export const courseCritiqueUrl = (courseId) => `https://critique.gatech.edu/course?courseID=${encodeURIComponent(gpaKey(courseId))}`;
+
 /** Every unexpired cached GPA entry, for synchronous hydration on startup. */
 export function cachedGpas() {
   const now = Date.now();
