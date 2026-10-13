@@ -25,7 +25,7 @@ export default function Sidebar({ result, selected }) {
       <div className="side-scroll">
         {tab === 'courses' ? (
           <>
-            {plan.courses.length > 0 && <SeatFilter />}
+            <SeatFilter />
             {plan.courses.map((id) => (
               <CourseCard
                 key={id}
@@ -41,7 +41,7 @@ export default function Sidebar({ result, selected }) {
               <b>star</b> a professor to only consider their sections. Set time, day, seat and GPA rules in{' '}
               <a onClick={() => setTab('criteria')}>Auto-Schedule</a>.
             </p>
-            {plan.courses.length > 0 && <SeatLegend />}
+            <SeatLegend />
           </>
         ) : (
           <Criteria result={result} />

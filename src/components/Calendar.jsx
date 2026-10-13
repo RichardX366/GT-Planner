@@ -4,8 +4,9 @@ import { DAYS, daysOf, fmtHour, fmtRange } from '../lib/time.js';
 const HOUR_PX = 58;
 
 function rangeFor(combo, criteria, ghost) {
+  // Always show 8am–10pm; grow further only if a class falls outside it.
   let lo = 8;
-  let hi = 18;
+  let hi = 22;
   [...(combo?.sections || []), ...(ghost ? [ghost] : [])].forEach((s) =>
     s.meetings.forEach((m) => {
       lo = Math.min(lo, Math.floor(m.start / 60));
@@ -54,6 +55,8 @@ export default function Calendar({ combo, colors, criteria, preview, ghost = nul
               {fmtHour(h)}
             </div>
           ))}
+          {/* closing label on the bottom line (e.g. 10pm) */}
+          <div className="cal-hour end">{fmtHour(hi)}</div>
         </div>
         {DAYS.map((d) => (
           <div key={d} className={`cal-col ${offDays.includes(d) ? 'off' : ''}`}>
@@ -124,7 +127,7 @@ export default function Calendar({ combo, colors, criteria, preview, ghost = nul
 /** Tiny bar preview of a combination, like gt-scheduler's combination list. */
 export function MiniCalendar({ combo, colors }) {
   const lo = 8 * 60;
-  const span = 12 * 60;
+  const span = 14 * 60; // 8am–10pm, matching the main calendar
   return (
     <div className="mini-cal">
       {DAYS.map((d) => (

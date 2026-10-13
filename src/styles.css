@@ -946,6 +946,10 @@ select:focus {
   transform: translateY(-7px);
 }
 
+.cal-hour.end {
+  height: 0;
+}
+
 .cal-col {
   position: relative;
   border-left: 1px solid var(--grid);
