@@ -75,8 +75,8 @@ export default function Combinations({ result, hasResult, pending, selected, sel
           <div className="notice danger">
             <AlertTriangle size={15} />
             <div>
-              <b>{result.emptyCourses.join(', ')}</b> has no sections left after your pins and bans. Unban a section or
-              professor to continue.
+              <b>{result.emptyCourses.join(', ')}</b> has no sections left. Sections with no set meeting time and at
+              other campuses aren’t scheduled; otherwise unban a section or professor to continue.
             </div>
           </div>
         )}

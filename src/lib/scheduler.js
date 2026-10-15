@@ -30,6 +30,9 @@ export function seatStatus(seat) {
 
 export const isLead = (course, s) => course.leads.includes(s);
 
+/** Sections with no meeting time (online/asynchronous/TBA) are never scheduled. */
+export const hasSetTime = (s) => s.meetings.length > 0;
+
 /** All valid section bundles (lead section + linked lab when the course has one). */
 export function courseBundles(course, plan) {
   const excluded = new Set(plan.excluded);
@@ -37,7 +40,7 @@ export function courseBundles(course, plan) {
   const banned = plan.bannedInstructors[course.id] || [];
   const forced = plan.forcedInstructors[course.id] || [];
   const campus = plan.criteria.campus;
-  const ok = (s) => !excluded.has(s.crn) && (!campus?.on || s.campus === campus.value);
+  const ok = (s) => !excluded.has(s.crn) && hasSetTime(s) && (!campus?.on || s.campus === campus.value);
 
   let leads = course.leads.filter(ok).filter((s) => !banned.includes(s.instructor));
   if (forced.length) leads = leads.filter((s) => forced.includes(s.instructor));
@@ -626,7 +629,7 @@ function uniqueByTime(bundles) {
 /** Every lecture/lab pairing for a course, ignoring that course's own pins and bans. */
 function rawBundles(course, plan) {
   const campus = plan.criteria.campus;
-  const ok = (s) => !campus?.on || s.campus === campus.value;
+  const ok = (s) => hasSetTime(s) && (!campus?.on || s.campus === campus.value);
   const leads = course.leads.filter(ok);
   if (!course.hasLab) return leads.map((s) => [s]);
   const byCrn = Object.fromEntries(course.labs.filter(ok).map((l) => [l.crn, l]));

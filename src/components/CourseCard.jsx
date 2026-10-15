@@ -5,7 +5,7 @@ import { usePreview } from '../lib/preview.jsx';
 import { useSeatFilter } from './SeatKey.jsx';
 import { PALETTE, toggleIn, usePlanner } from '../lib/store.jsx';
 import { useData } from '../lib/data.jsx';
-import { courseBundles, seatStatus } from '../lib/scheduler.js';
+import { courseBundles, hasSetTime, seatStatus } from '../lib/scheduler.js';
 import { fmtRange } from '../lib/time.js';
 import { courseCritiqueUrl } from '../lib/api.js';
 
@@ -55,8 +55,11 @@ export default function CourseCard({ id, selectedCrns, empty, conflicts = {} }) 
   const forced = plan.forcedInstructors[id] || [];
   const options = courseBundles(course, plan).length;
   const campus = plan.criteria.campus;
-  const onCampus = (s) => !campus.on || s.campus === campus.value;
-  const hiddenCount = course.sections.filter((s) => !onCampus(s)).length;
+  const atCampus = (s) => !campus.on || s.campus === campus.value;
+  // Only sections the scheduler can use are listed: right campus and a set meeting time.
+  const onCampus = (s) => atCampus(s) && hasSetTime(s);
+  const hiddenCount = course.sections.filter((s) => !atCampus(s)).length;
+  const noTimeCount = course.sections.filter((s) => atCampus(s) && !hasSetTime(s)).length;
   const courseGpa = getGpa(id);
 
   // Seat filter only affects what's listed; pinned sections and ones in the shown schedule always stay.
@@ -199,6 +202,11 @@ export default function CourseCard({ id, selectedCrns, empty, conflicts = {} }) 
           {hiddenCount > 0 && (
             <div className="hidden-note">
               {hiddenCount} section{hiddenCount === 1 ? '' : 's'} at other campuses hidden
+            </div>
+          )}
+          {noTimeCount > 0 && (
+            <div className="hidden-note">
+              {noTimeCount} section{noTimeCount === 1 ? '' : 's'} with no set time hidden
             </div>
           )}
         </div>
