@@ -10,12 +10,8 @@ const DEBOUNCE_MS = 120;
 export const EMPTY_RESULT = {
   matches: [],
   backups: [],
-  matchCount: 0,
-  backupCount: 0,
-  total: 0,
   truncated: false,
   emptyCourses: [],
-  impact: {},
   conflicts: {},
 };
 

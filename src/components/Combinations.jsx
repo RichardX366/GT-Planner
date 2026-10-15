@@ -80,27 +80,25 @@ export default function Combinations({ result, hasResult, pending, selected, sel
             </div>
           </div>
         )}
-        {hasResult && !result.emptyCourses.length && plan.courses.length > 0 && result.total === 0 && (
+        {hasResult && !result.emptyCourses.length && plan.courses.length > 0 && !matches.length && !backups.length && (
           <div className="notice danger">
             <AlertTriangle size={15} />
             <div>Every combination has a time conflict. Try removing a course or unpinning a section.</div>
           </div>
         )}
 
-        {result.total > 0 && (
-          <div className={`notice ${result.matchCount ? 'ok' : 'warn'}`}>
-            {result.matchCount ? <CheckCircle2 size={15} /> : <LifeBuoy size={15} />}
+        {matches.length + backups.length > 0 && (
+          <div className={`notice ${matches.length ? 'ok' : 'warn'}`}>
+            {matches.length ? <CheckCircle2 size={15} /> : <LifeBuoy size={15} />}
             <div>
-              {result.matchCount ? (
-                <>
-                  <b>{result.matchCount}</b> of {result.total} conflict-free schedules meet all your rules.
-                </>
+              {matches.length ? (
+                <>These schedules meet all your rules.</>
               ) : (
                 <>
                   No schedule meets every rule. Showing <b>backup schedules</b> that break the fewest.
                 </>
               )}
-              {result.truncated && ' (search capped)'}
+              {result.truncated && ' (search stopped early)'}
             </div>
           </div>
         )}
@@ -109,9 +107,7 @@ export default function Combinations({ result, hasResult, pending, selected, sel
 
         {backups.length > 0 && (
           <>
-            <div className="combos-sub">
-              Backup schedules <span>{result.backupCount}</span>
-            </div>
+            <div className="combos-sub">Backup schedules</div>
             {backups.map((c, i) => item(c, i, true))}
           </>
         )}

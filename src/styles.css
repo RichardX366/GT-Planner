@@ -703,12 +703,6 @@ select:focus {
   flex: 1;
 }
 
-.impact {
-  font-size: 12px;
-  font-weight: 500;
-  color: var(--warn);
-  white-space: nowrap;
-}
 
 .rule-body {
   padding: 0 10px 10px;

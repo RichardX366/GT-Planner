@@ -44,7 +44,7 @@ export default function Sidebar({ result, selected }) {
             <SeatLegend />
           </>
         ) : (
-          <Criteria result={result} />
+          <Criteria />
         )}
       </div>
       <div className="side-foot">
