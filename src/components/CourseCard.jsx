@@ -5,7 +5,7 @@ import { usePreview } from '../lib/preview.jsx';
 import { useSeatFilter } from './SeatKey.jsx';
 import { PALETTE, toggleIn, usePlanner } from '../lib/store.jsx';
 import { useData } from '../lib/data.jsx';
-import { courseBundles, hasSetTime, seatStatus } from '../lib/scheduler.js';
+import { courseBundles, hasSetTime, preferTimed, seatStatus } from '../lib/scheduler.js';
 import { fmtRange } from '../lib/time.js';
 import { courseCritiqueUrl } from '../lib/api.js';
 
@@ -56,10 +56,17 @@ export default function CourseCard({ id, selectedCrns, empty, conflicts = {} }) 
   const options = courseBundles(course, plan).length;
   const campus = plan.criteria.campus;
   const atCampus = (s) => !campus.on || s.campus === campus.value;
-  // Only sections the scheduler can use are listed: right campus and a set meeting time.
-  const onCampus = (s) => atCampus(s) && hasSetTime(s);
+  // Only sections the scheduler can use are listed: right campus, and a set meeting time
+  // (untimed labs stay when the course has no timed ones, as the scheduler allows).
+  const labByCrn = Object.fromEntries(course.labs.map((l) => [l.crn, l]));
+  const usableLabs = new Set(
+    course.leads.flatMap((lead) =>
+      preferTimed(lead.labCrns.map((c) => labByCrn[c]).filter((l) => l && atCampus(l))).map((l) => l.crn)
+    )
+  );
+  const onCampus = (s) => atCampus(s) && (course.labs.includes(s) ? usableLabs.has(s.crn) : hasSetTime(s));
   const hiddenCount = course.sections.filter((s) => !atCampus(s)).length;
-  const noTimeCount = course.sections.filter((s) => atCampus(s) && !hasSetTime(s)).length;
+  const noTimeCount = course.sections.filter((s) => atCampus(s) && !onCampus(s)).length;
   const courseGpa = getGpa(id);
 
   // Seat filter only affects what's listed; pinned sections and ones in the shown schedule always stay.

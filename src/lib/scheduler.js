@@ -30,8 +30,15 @@ export function seatStatus(seat) {
 
 export const isLead = (course, s) => course.leads.includes(s);
 
-/** Sections with no meeting time (online/asynchronous/TBA) are never scheduled. */
+/** Sections with no meeting time (online/asynchronous/TBA) aren't scheduled as a course's main section. */
 export const hasSetTime = (s) => s.meetings.length > 0;
+
+/**
+ * A lecture's usable labs: untimed labs are dropped when a timed one exists (they'd always
+ * win, never conflicting), but kept when every linked lab is untimed (e.g. CS 3651), since
+ * the lecture can't be taken without one.
+ */
+export const preferTimed = (labs) => (labs.some(hasSetTime) ? labs.filter(hasSetTime) : labs);
 
 /** All valid section bundles (lead section + linked lab when the course has one). */
 export function courseBundles(course, plan) {
@@ -40,9 +47,9 @@ export function courseBundles(course, plan) {
   const banned = plan.bannedInstructors[course.id] || [];
   const forced = plan.forcedInstructors[course.id] || [];
   const campus = plan.criteria.campus;
-  const ok = (s) => !excluded.has(s.crn) && hasSetTime(s) && (!campus?.on || s.campus === campus.value);
+  const ok = (s) => !excluded.has(s.crn) && (!campus?.on || s.campus === campus.value);
 
-  let leads = course.leads.filter(ok).filter((s) => !banned.includes(s.instructor));
+  let leads = course.leads.filter(ok).filter(hasSetTime).filter((s) => !banned.includes(s.instructor));
   if (forced.length) leads = leads.filter((s) => forced.includes(s.instructor));
   const pinnedLeads = leads.filter((s) => pinned.has(s.crn));
   if (pinnedLeads.length) leads = pinnedLeads;
@@ -55,7 +62,11 @@ export function courseBundles(course, plan) {
   const labOk = (crn) => byCrn[crn] && labs.includes(byCrn[crn]) && (!pinnedLabs.size || pinnedLabs.has(crn));
 
   return leads.flatMap((lead) =>
-    lead.labCrns.length ? lead.labCrns.filter(labOk).map((crn) => [lead, byCrn[crn]]) : pinnedLabs.size ? [] : [[lead]]
+    lead.labCrns.length
+      ? preferTimed(lead.labCrns.filter(labOk).map((crn) => byCrn[crn])).map((lab) => [lead, lab])
+      : pinnedLabs.size
+        ? []
+        : [[lead]]
   );
 }
 
@@ -629,12 +640,12 @@ function uniqueByTime(bundles) {
 /** Every lecture/lab pairing for a course, ignoring that course's own pins and bans. */
 function rawBundles(course, plan) {
   const campus = plan.criteria.campus;
-  const ok = (s) => hasSetTime(s) && (!campus?.on || s.campus === campus.value);
-  const leads = course.leads.filter(ok);
+  const ok = (s) => !campus?.on || s.campus === campus.value;
+  const leads = course.leads.filter(ok).filter(hasSetTime);
   if (!course.hasLab) return leads.map((s) => [s]);
   const byCrn = Object.fromEntries(course.labs.filter(ok).map((l) => [l.crn, l]));
   return leads.flatMap((lead) =>
-    lead.labCrns.length ? lead.labCrns.filter((c) => byCrn[c]).map((c) => [lead, byCrn[c]]) : [[lead]]
+    lead.labCrns.length ? preferTimed(lead.labCrns.filter((c) => byCrn[c]).map((c) => byCrn[c])).map((lab) => [lead, lab]) : [[lead]]
   );
 }
 
